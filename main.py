@@ -21,7 +21,7 @@ class Home(Screen):
             self.lon = -81.3789
         
         # Api Url
-        mapbox_url = "https://api.mapbox.com/styles/v1/mapbox/streets-v11/tiles/{z}/{x}/{y}?access_token=sk.eyJ1IjoiYXJqdW5ldCIsImEiOiJjbW5jOWl6bTEwYW15Mm9vemxibWdxbmVuIn0.rx64yPcodhv0WtFe3cU7jg"
+        mapbox_url = "https://api.mapbox.com/styles/v1/mapbox/streets-v11/tiles/{z}/{x}/{y}?access_token=pk.eyJ1IjoiYXJqdW5ldCIsImEiOiJjbW5jZTlpYjMxN2Q4Mm9vbnN6cXloZHc3In0.6mFjQz4XT7ghwW2Rc8Kcxw"
         
         # Create the MapView
         self.mapview = MapView(zoom=15, lat=self.lat, lon=self.lon)
@@ -45,9 +45,9 @@ class Home(Screen):
         print(f"Lat: {lat}, Lon: {lon}")
 
     def on_location(self, **kwargs):
-        lat = kwargs.get('lat')
-        lon = kwargs.get('lon')
-        print(f"Current Position: {lat}, {lon}")
+        self.lat = kwargs.get('lat')
+        self.lon = kwargs.get('lon')
+        print(f"Current Position: {self.lat}, {self.lon}")
 
 
 class CarFinderApp(App):
