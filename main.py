@@ -1,5 +1,6 @@
 from kivy_garden.mapview import MapView
 from kivy.uix.screenmanager import Screen
+from kivy.clock import mainthread
 
 from carbonkivy.app import App
 
@@ -9,17 +10,14 @@ class Home(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-        try:
-            self.get_location()
-            gps.configure(on_location=self.on_location)
-            gps.start()
-            print("GPS started successfully.")
+        # Default Vars:
 
-        except NotImplementedError:
-            print("GPS coordinates not supported on this device...... using fake coordinates")
-            self.lat = 28.5384
-            self.lon = -81.3789
-        
+        self.has_centered = False
+
+        # Default coordinates (Orlando, FL) in case GPS is not available
+        self.lat = 28.5384
+        self.lon = -81.3789
+
         # Api Url
         mapbox_url = "https://api.mapbox.com/styles/v1/mapbox/streets-v11/tiles/{z}/{x}/{y}?access_token=pk.eyJ1IjoiYXJqdW5ldCIsImEiOiJjbW5jZTlpYjMxN2Q4Mm9vbnN6cXloZHc3In0.6mFjQz4XT7ghwW2Rc8Kcxw"
         
@@ -29,30 +27,36 @@ class Home(Screen):
         
         # Add the map to the Screen
         self.add_widget(self.mapview)
-        
-    def get_location(self):
-        gps.configure(on_location=self.print_location)
-        # 2. Start the GPS
-        gps.start(minTime=1000, minDistance=1)
-        print("GPS Started. Waiting for signal...")
-        
-        return None
-    
-    def print_location(self, **kwargs):
-        # This function runs every time the GPS updates
-        lat = kwargs.get('lat')
-        lon = kwargs.get('lon')
-        print(f"Lat: {lat}, Lon: {lon}")
 
+        self.start_gps()
+
+    def start_gps(self):
+        try:
+            # Configure and start GPS
+            gps.configure(on_location=self.on_location)
+            gps.start(minTime=1000, minDistance=1)
+            print("GPS Started Successfully.")
+
+        # Handle cases where GPS is not supported or available
+        except (NotImplementedError, ModuleNotFoundError):
+            print("GPS not supported on this device. Using fake coordinates.")
+
+    @mainthread # Ensure UI updates happen on the main thread
     def on_location(self, **kwargs):
         self.lat = kwargs.get('lat')
         self.lon = kwargs.get('lon')
-        print(f"Current Position: {self.lat}, {self.lon}")
+        
+        # Update the map's center to follow your location
+        print(f"Updated Position: {self.lat}, {self.lon}")
 
+        if not self.has_centered:
+            self.mapview.center_on(self.lat, self.lon)
+            self.has_centered = True
+            print("Initial GPS lock found. Map centered.")
 
-class CarFinderApp(App):
+class SaveMySpot(App):
     def build(self):
         return Home()
 
 if __name__ == "__main__":
-    CarFinderApp().run()
+    SaveMySpot().run()
