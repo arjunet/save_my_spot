@@ -13,7 +13,11 @@ class Home(Screen):
 
         if platform == 'android':
             from android.permissions import request_permissions, Permission
-            request_permissions([Permission.ACCESS_FINE_LOCATION, Permission.ACCESS_COARSE_LOCATION])
+            request_permissions([Permission.ACCESS_FINE_LOCATION, Permission.ACCESS_COARSE_LOCATION], self.permissions_callback)
+
+        else:
+                print("Non-Android platform detected. Using fake coordinates.")
+                self.start_gps()
 
         # Default Vars:
         self.has_centered = False
@@ -32,7 +36,14 @@ class Home(Screen):
         # Add the map to the Screen
         self.add_widget(self.mapview)
 
-        self.start_gps()
+
+    def permissions_callback(self, permissions, grants):
+        if all(grants):
+            print("Location permissions granted.")
+            self.start_gps()
+        else:
+            print("Location permissions denied. Using fake coordinates.")
+            self.start_gps()
 
     def start_gps(self):
         try:
