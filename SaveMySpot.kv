@@ -1,0 +1,16 @@
+<HomeScreen>:
+    # We name the layout so Python can see it
+    FloatLayout:
+        id: main_layout
+        
+        # CButton is here...
+        CButtonPrimary:
+            text: "Save My Spot"
+            pos_hint: {"center_x": 0.5, "center_y": 0.15}
+            icon: "location"
+            on_release: root.add_car_marker()
+
+        CButtonSecondary:
+            text: "Find My Car"
+            pos_hint: {"center_x": 0.5, "center_y": 0.25}
+            icon: "car"

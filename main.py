@@ -1,13 +1,18 @@
-from kivy_garden.mapview import MapView
+from kivy_garden.mapview import MapView, MapMarker
 from kivy.uix.screenmanager import Screen
 from kivy.clock import mainthread
 from kivy.utils import platform
+from kivy.clock import Clock
+from kivy.core.window import Window
 
 from carbonkivy.app import App
+from carbonkivy.utils import _Dict, update_system_ui
+from carbonkivy.app import CarbonApp
+from carbonkivy.uix.button import CButtonPrimary
 
 from plyer import gps
 
-class Home(Screen):
+class HomeScreen(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
@@ -30,12 +35,14 @@ class Home(Screen):
         mapbox_url = "https://api.mapbox.com/styles/v1/mapbox/streets-v11/tiles/{z}/{x}/{y}?access_token=pk.eyJ1IjoiYXJqdW5ldCIsImEiOiJjbW5jZTlpYjMxN2Q4Mm9vbnN6cXloZHc3In0.6mFjQz4XT7ghwW2Rc8Kcxw"
         
         # Create the MapView
-        self.mapview = MapView(zoom=15, lat=self.lat, lon=self.lon)
+        self.mapview = MapView(zoom=25, lat=self.lat, lon=self.lon)
         self.mapview.map_source.url = mapbox_url
         
         # Add the map to the Screen
-        self.add_widget(self.mapview)
+        Clock.schedule_once(self.add_buttons, 2)
 
+    def add_buttons(self, dt):
+        self.ids.main_layout.add_widget(self.mapview, index=len(self.ids.main_layout.children))
 
     def permissions_callback(self, permissions, grants):
         if all(grants):
@@ -69,9 +76,16 @@ class Home(Screen):
             self.has_centered = True
             print("Initial GPS lock found. Map centered.")
 
-class SaveMySpot(App):
+    def add_car_marker(self):
+        if hasattr(self, 'parked_car_marker') and self.parked_car_marker:
+            self.mapview.remove_widget(self.parked_car_marker)
+            
+        self.parked_car_marker = MapMarker(lat=self.lat, lon=self.lon)
+        self.mapview.add_widget(self.parked_car_marker)
+
+class SaveMySpot(CarbonApp):
     def build(self):
-        return Home()
+        return HomeScreen()
 
 if __name__ == "__main__":
     SaveMySpot().run()
