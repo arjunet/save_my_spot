@@ -1,6 +1,7 @@
 from kivy_garden.mapview import MapView
 from kivy.uix.screenmanager import Screen
 from kivy.clock import mainthread
+from kivy.utils import platform
 
 from carbonkivy.app import App
 
@@ -10,8 +11,11 @@ class Home(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-        # Default Vars:
+        if platform == 'android':
+            from android.permissions import request_permissions, Permission
+            request_permissions([Permission.ACCESS_FINE_LOCATION, Permission.ACCESS_COARSE_LOCATION])
 
+        # Default Vars:
         self.has_centered = False
 
         # Default coordinates (Orlando, FL) in case GPS is not available
