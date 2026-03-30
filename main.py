@@ -4,6 +4,7 @@ from kivy.clock import mainthread
 from kivy.utils import platform
 from kivy.clock import Clock
 from kivy.core.window import Window
+from kivy.lang import Builder
 
 from carbonkivy.app import App
 from carbonkivy.utils import _Dict, update_system_ui
@@ -11,6 +12,8 @@ from carbonkivy.app import CarbonApp
 from carbonkivy.uix.button import CButtonPrimary
 
 from plyer import gps
+
+Builder.load_file('SaveMySpot.kv')
 
 class HomeScreen(Screen):
     def __init__(self, **kwargs):
