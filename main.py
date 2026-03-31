@@ -9,9 +9,10 @@ from kivy.lang import Builder
 from carbonkivy.app import App
 from carbonkivy.utils import _Dict, update_system_ui
 from carbonkivy.app import CarbonApp
-from carbonkivy.uix.button import CButtonPrimary
+from carbonkivy.uix.modal import CModal
 
 from plyer import gps
+import weakref
 
 Builder.load_file('SaveMySpot.kv')
 
@@ -81,10 +82,29 @@ class HomeScreen(Screen):
 
     def add_car_marker(self):
         if hasattr(self, 'parked_car_marker') and self.parked_car_marker:
+            modal = ChangeParkedLocationModal(lat=self.lat, lon=self.lon, mapview=self.mapview)
+            self._modal_ref = weakref.ref(modal)
+            modal.open()
+            self._modal_ref = None
+            modal = None
+            
+        self.parked_car_marker = MapMarker(lat=self.lat, lon=self.lon)
+        self.mapview.add_widget(self.parked_car_marker)
+
+class ChangeParkedLocationModal(CModal):
+    def __init__(self, lat, lon, mapview, **kwargs):
+        super().__init__(**kwargs)
+        self.lat = lat
+        self.lon = lon
+        self.mapview = mapview
+
+    def change(self):
+        if hasattr(self, 'parked_car_marker') and self.parked_car_marker:
             self.mapview.remove_widget(self.parked_car_marker)
             
         self.parked_car_marker = MapMarker(lat=self.lat, lon=self.lon)
         self.mapview.add_widget(self.parked_car_marker)
+        self.dismiss()
 
 class SaveMySpot(CarbonApp):
     def build(self):

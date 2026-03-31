@@ -5,7 +5,7 @@
         
         # CButton is here...
         CButtonPrimary:
-            text: "Save My Spot"
+            text: "Save Car Location"
             pos_hint: {"center_x": 0.5, "center_y": 0.15}
             icon: "location"
             on_release: root.add_car_marker()
@@ -14,3 +14,43 @@
             text: "Find My Car"
             pos_hint: {"center_x": 0.5, "center_y": 0.25}
             icon: "car"
+
+<ChangeParkedLocationModal>:
+    CModalLayout:
+        CModalHeader:
+            CModalHeaderLabel:
+                text: "Change Parked Location"
+            CModalHeaderTitle:
+                text: "Are you sure you want to change your parked location?"
+        CModalBody:
+            CModalBodyContent:
+                text: "If you change your parked location, the previous location will be gone. Do you want to proceed?"
+
+            CButtonPrimary:
+                text: "No, keep it"
+                role: "Large Productive"
+                size_hint_x: 1          
+                size_hint_y: None
+                height: dp(100) 
+                length: 1
+                text_size: self.width - dp(20), None
+                icon: "car"
+                on_press:
+                    root.dismiss()
+
+            CButtonSecondary:
+                text: "Yes, change it"
+                role: "Large Productive"
+                size_hint_x: 1          
+                size_hint_y: None
+                height: dp(100) 
+                length: 1
+                text_size: self.width - dp(20), None
+                icon: "car"
+                on_press:
+                    root.change()
+
+    CModalCloseButton:
+        on_press:
+            root.dismiss()
+            app.root.current = 'App'
