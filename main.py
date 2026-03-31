@@ -3,15 +3,13 @@ from kivy.uix.screenmanager import Screen
 from kivy.clock import mainthread
 from kivy.utils import platform
 from kivy.clock import Clock
-from kivy.core.window import Window
 from kivy.lang import Builder
 
-from carbonkivy.app import App
 from carbonkivy.utils import _Dict, update_system_ui
 from carbonkivy.app import CarbonApp
 from carbonkivy.uix.modal import CModal
 
-from plyer import gps
+from plyer import gps, camera
 import weakref
 
 Builder.load_file('SaveMySpot.kv')
@@ -88,8 +86,29 @@ class HomeScreen(Screen):
             self._modal_ref = None
             modal = None
             
-        self.parked_car_marker = MapMarker(lat=self.lat, lon=self.lon)
-        self.mapview.add_widget(self.parked_car_marker)
+        else:
+            self.parked_car_marker = MapMarker(lat=self.lat, lon=self.lon)
+            self.mapview.add_widget(self.parked_car_marker)
+            modal = TakePictureModal()
+            self._modal_ref = weakref.ref(modal)
+            modal.open()
+            self._modal_ref = None
+            modal = None
+
+class TakePictureModal(CModal):
+    def take_picture(self):
+        try:
+            camera.take_picture(on_complete=self.camera_callback, filename="./CarPicture.jpg")
+        except NotImplementedError:
+            print("Camera not supported on this device.")
+            self.dismiss()
+
+    def camera_callback(self, filepath):
+        if filepath:
+            print(f"Picture saved at: {filepath}")
+        else:
+            print("Failed to save picture.")
+        self.dismiss()
 
 class ChangeParkedLocationModal(CModal):
     def __init__(self, lat, lon, mapview, **kwargs):
@@ -105,6 +124,12 @@ class ChangeParkedLocationModal(CModal):
         self.parked_car_marker = MapMarker(lat=self.lat, lon=self.lon)
         self.mapview.add_widget(self.parked_car_marker)
         self.dismiss()
+
+        modal = TakePictureModal()
+        self._modal_ref = weakref.ref(modal)
+        modal.open()
+        self._modal_ref = None
+        modal = None
 
 class SaveMySpot(CarbonApp):
     def build(self):

@@ -54,3 +54,44 @@
         on_press:
             root.dismiss()
             app.root.current = 'App'
+
+<TakePictureModal>:
+    CModalLayout:
+        CModalHeader:
+            CModalHeaderLabel:
+                text: "Take a Picture"
+            CModalHeaderTitle:
+                text: "Do you want to take a picture of your parked car?"
+
+        CModalBody:
+            CModalBodyContent:
+                text: "Taking a picture of your parked car can help you remember where you parked and make it easier to find later. Do you want to take a picture now?"
+
+            CButtonPrimary:
+                text: "No, maybe later"
+                role: "Large Productive"
+                size_hint_x: 1          
+                size_hint_y: None
+                height: dp(100) 
+                length: 1
+                text_size: self.width - dp(20), None
+                icon: "camera"
+                on_press:
+                    root.dismiss()
+
+            CButtonSecondary:
+                text: "Yes, take a picture"
+                role: "Large Productive"
+                size_hint_x: 1          
+                size_hint_y: None
+                height: dp(100) 
+                length: 1
+                text_size: self.width - dp(20), None
+                icon: "camera"
+                on_press:
+                    root.take_picture()
+
+    CModalCloseButton:
+        on_press:
+            root.dismiss()
+            app.root.current = 'App'
