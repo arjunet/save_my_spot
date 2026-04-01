@@ -101,7 +101,6 @@ class TakePictureModal(CModal):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.cwd = getcwd() + "/"
-        self.ids.path_label.text = self.cwd
 
     def take_picture(self):
         if platform == 'android':
@@ -113,6 +112,10 @@ class TakePictureModal(CModal):
             except NotImplementedError:
                 print("Camera not supported on this device.")
                 self.dismiss()
+
+        else:
+            print("Camera functionality is only available on Android devices.")
+            self.dismiss()
 
     def camera_callback(self, filepath):
         if filepath:
