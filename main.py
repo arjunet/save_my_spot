@@ -104,6 +104,12 @@ class TakePictureModal(CModal):
 
     def take_picture(self):
         if platform == 'android':
+            
+            from jnius import autoclass
+            StrictMode = autoclass('android.os.StrictMode')
+            VmPolicy = autoclass('android.os.StrictMode$VmPolicy')
+            StrictMode.setVmPolicy(VmPolicy.Builder().build())
+
             filepath = self.cwd + "CarPicture.jpg"
 
             try:
