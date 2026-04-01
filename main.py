@@ -11,6 +11,7 @@ from carbonkivy.uix.modal import CModal
 
 from plyer import gps, camera
 import weakref
+import os
 
 Builder.load_file('SaveMySpot.kv')
 
@@ -97,9 +98,13 @@ class HomeScreen(Screen):
 
 class TakePictureModal(CModal):
     def take_picture(self):
-        try:
-            camera.take_picture(on_complete=self.camera_callback, filename="./CarPicture.jpg")
-        except NotImplementedError:
+        if platform == 'android':
+            from android.storage import app_storage_path
+            save_path = app_storage_path()
+
+            filename = os.path.join(save_path, "CarPicture.jpg")
+            camera.take_picture(on_complete=self.camera_callback, filename=filename)
+        else:
             print("Camera not supported on this device.")
             self.dismiss()
 
