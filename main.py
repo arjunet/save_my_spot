@@ -21,7 +21,7 @@ class HomeScreen(Screen):
 
         if platform == 'android':
             from android.permissions import request_permissions, Permission
-            request_permissions([Permission.ACCESS_FINE_LOCATION, Permission.ACCESS_COARSE_LOCATION], self.permissions_callback)
+            request_permissions([Permission.ACCESS_FINE_LOCATION, Permission.ACCESS_COARSE_LOCATION, Permission.CAMERA], self.permissions_callback)
 
         else:
                 print("Non-Android platform detected. Using fake coordinates.")
