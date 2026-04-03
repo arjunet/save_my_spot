@@ -1,52 +1,63 @@
+# Imports:
 from kivy_garden.mapview import MapView, MapMarker
 from kivy.uix.screenmanager import Screen
 from kivy.clock import mainthread
 from kivy.utils import platform
 from kivy.clock import Clock
 from kivy.lang import Builder
+from kivy.storage.jsonstore import JsonStore
 
-from carbonkivy.utils import _Dict, update_system_ui
 from carbonkivy.app import CarbonApp
 from carbonkivy.uix.modal import CModal
 
-from plyer import gps, camera
+from plyer import gps
 import weakref
-import os
-from os import getcwd
 
+# Load the KV file:
 Builder.load_file('SaveMySpot.kv')
 
 class HomeScreen(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        # Api Url:
+        mapbox_url = "https://api.mapbox.com/styles/v1/mapbox/streets-v11/tiles/{z}/{x}/{y}?access_token=pk.eyJ1IjoiYXJqdW5ldCIsImEiOiJjbW5jZTlpYjMxN2Q4Mm9vbnN6cXloZHc3In0.6mFjQz4XT7ghwW2Rc8Kcxw"
 
         if platform == 'android':
+            # Request location permissions on Android:
             from android.permissions import request_permissions, Permission
             request_permissions([Permission.ACCESS_FINE_LOCATION, Permission.ACCESS_COARSE_LOCATION, Permission.CAMERA], self.permissions_callback)
 
         else:
-                print("Non-Android platform detected. Using fake coordinates.")
-                self.start_gps()
+            # For non-Android platforms, we can skip permission requests and use fake coordinates:
+            print("Non-Android platform detected. Using fake coordinates.")
+            self.start_gps()
 
         # Default Vars:
         self.has_centered = False
 
-        # Default coordinates (Orlando, FL) in case GPS is not available
+        # Default coordinates (Orlando, FL) in case GPS is not available:
         self.lat = 28.5384
         self.lon = -81.3789
 
-        # Api Url
-        mapbox_url = "https://api.mapbox.com/styles/v1/mapbox/streets-v11/tiles/{z}/{x}/{y}?access_token=pk.eyJ1IjoiYXJqdW5ldCIsImEiOiJjbW5jZTlpYjMxN2Q4Mm9vbnN6cXloZHc3In0.6mFjQz4XT7ghwW2Rc8Kcxw"
-        
-        # Create the MapView
+        # Add the mapview:
         self.mapview = MapView(zoom=25, lat=self.lat, lon=self.lon)
         self.mapview.map_source.url = mapbox_url
-        
-        # Add the map to the Screen
-        Clock.schedule_once(self.add_buttons, 2)
+        Clock.schedule_once(self.add_ui_elements, 2)
 
-    def add_buttons(self, dt):
+    def add_ui_elements(self, dt):
         self.ids.main_layout.add_widget(self.mapview, index=len(self.ids.main_layout.children))
+        store = JsonStore('session.json')
+        if store.exists('location'):
+            data = store.get('location')
+            # Use a tiny delay to ensure the MapView has initialized its bounds
+            Clock.schedule_once(lambda dt: self.load_saved_marker(data['lat'], data['lon']), 0.5)
+
+    def load_saved_marker(self, lat, lon):
+        self.parked_car_marker = MapMarker(lat=lat, lon=lon)
+        self.mapview.add_widget(self.parked_car_marker)
+        # Center the map on the saved location
+        self.mapview.center_on(lat, lon)
+        self.has_centered = True
 
     def permissions_callback(self, permissions, grants):
         if all(grants):
@@ -78,7 +89,6 @@ class HomeScreen(Screen):
         if not self.has_centered:
             self.mapview.center_on(self.lat, self.lon)
             self.has_centered = True
-            print("Initial GPS lock found. Map centered.")
 
     def add_car_marker(self):
         if hasattr(self, 'parked_car_marker') and self.parked_car_marker:
@@ -91,44 +101,7 @@ class HomeScreen(Screen):
         else:
             self.parked_car_marker = MapMarker(lat=self.lat, lon=self.lon)
             self.mapview.add_widget(self.parked_car_marker)
-            modal = TakePictureModal()
-            self._modal_ref = weakref.ref(modal)
-            modal.open()
-            self._modal_ref = None
-            modal = None
-
-class TakePictureModal(CModal):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.cwd = getcwd() + "/"
-
-    def take_picture(self):
-        if platform == 'android':
-            
-            from jnius import autoclass
-            StrictMode = autoclass('android.os.StrictMode')
-            VmPolicy = autoclass('android.os.StrictMode$VmPolicy')
-            StrictMode.setVmPolicy(VmPolicy.Builder().build())
-
-            filepath = self.cwd + "CarPicture.jpg"
-
-            try:
-                camera.take_picture(filename=filepath,
-                                   on_complete=self.camera_callback)
-            except NotImplementedError:
-                print("Camera not supported on this device.")
-                self.dismiss()
-
-        else:
-            print("Camera functionality is only available on Android devices.")
-            self.dismiss()
-
-    def camera_callback(self, filepath):
-        if filepath:
-            print(f"Picture saved at: {filepath}")
-        else:
-            print("Failed to save picture.")
-        self.dismiss()
+            JsonStore('session.json').put('location', lat=self.lat, lon=self.lon)
 
 class ChangeParkedLocationModal(CModal):
     def __init__(self, lat, lon, mapview, **kwargs):
@@ -144,12 +117,6 @@ class ChangeParkedLocationModal(CModal):
         self.parked_car_marker = MapMarker(lat=self.lat, lon=self.lon)
         self.mapview.add_widget(self.parked_car_marker)
         self.dismiss()
-
-        modal = TakePictureModal()
-        self._modal_ref = weakref.ref(modal)
-        modal.open()
-        self._modal_ref = None
-        modal = None
 
 class SaveMySpot(CarbonApp):
     def build(self):
