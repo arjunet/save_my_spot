@@ -16,6 +16,8 @@ import weakref
 # Load the KV file:
 Builder.load_file('SaveMySpot.kv')
 
+# ------------------------------------------------------------------------
+
 class HomeScreen(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -44,25 +46,11 @@ class HomeScreen(Screen):
         self.mapview.map_source.url = mapbox_url
         Clock.schedule_once(self.add_ui_elements, 2)
 
-    def add_ui_elements(self, dt):
-        self.ids.main_layout.add_widget(self.mapview, index=len(self.ids.main_layout.children))
-        store = JsonStore('session.json')
-        if store.exists('location'):
-            data = store.get('location')
-            # Use a tiny delay to ensure the MapView has initialized its bounds
-            Clock.schedule_once(lambda dt: self.load_saved_marker(data['lat'], data['lon']), 0.5)
-
-    def load_saved_marker(self, lat, lon):
-        self.parked_car_marker = MapMarker(lat=lat, lon=lon)
-        self.mapview.add_widget(self.parked_car_marker)
-        # Center the map on the saved location
-        self.mapview.center_on(lat, lon)
-        self.has_centered = True
-
     def permissions_callback(self, permissions, grants):
         if all(grants):
             print("Location permissions granted.")
             self.start_gps()
+
         else:
             print("Location permissions denied. Using fake coordinates.")
             self.start_gps()
@@ -79,6 +67,7 @@ class HomeScreen(Screen):
             print("GPS not supported on this device. Using fake coordinates.")
 
     @mainthread # Ensure UI updates happen on the main thread
+
     def on_location(self, **kwargs):
         self.lat = kwargs.get('lat')
         self.lon = kwargs.get('lon')
@@ -89,6 +78,21 @@ class HomeScreen(Screen):
         if not self.has_centered:
             self.mapview.center_on(self.lat, self.lon)
             self.has_centered = True
+
+    def add_ui_elements(self, dt):
+        self.ids.main_layout.add_widget(self.mapview, index=len(self.ids.main_layout.children))
+        store = JsonStore('session.json')
+        if store.exists('location'):
+            data = store.get('location')
+            # Use a tiny delay to ensure the MapView has initialized its bounds
+            Clock.schedule_once(lambda dt: self.load_saved_car_marker(data['lat'], data['lon']), 0.5)
+
+    def load_saved_car_marker(self, lat, lon):
+        self.parked_car_marker = MapMarker(lat=lat, lon=lon)
+        self.mapview.add_widget(self.parked_car_marker)
+        # Center the map on the saved location
+        self.mapview.center_on(lat, lon)
+        self.has_centered = True
 
     def add_car_marker(self):
         if hasattr(self, 'parked_car_marker') and self.parked_car_marker:
@@ -102,6 +106,17 @@ class HomeScreen(Screen):
             self.parked_car_marker = MapMarker(lat=self.lat, lon=self.lon)
             self.mapview.add_widget(self.parked_car_marker)
             JsonStore('session.json').put('location', lat=self.lat, lon=self.lon)
+
+    def add_current_location_marker(self):
+        if hasattr(self, 'current_location_marker') and self.current_location_marker:
+            self.mapview.remove_widget(self.current_location_marker)
+            
+        self.start_gps()  # Ensure GPS is running to get the latest location
+
+        self.current_location_marker = MapMarker(lat=self.lat, lon=self.lon, source='current_location_icon.png')
+        self.mapview.add_widget(self.current_location_marker)
+
+# ------------------------------------------------------------------------
 
 class ChangeParkedLocationModal(CModal):
     def __init__(self, lat, lon, mapview, **kwargs):

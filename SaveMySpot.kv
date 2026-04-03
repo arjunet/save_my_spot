@@ -1,9 +1,7 @@
 <HomeScreen>:
-    # We name the layout so Python can see it
     FloatLayout:
         id: main_layout
         
-        # CButton is here...
         CButtonPrimary:
             text: "Save Car Location"
             pos_hint: {"center_x": 0.5, "center_y": 0.15}
@@ -14,6 +12,9 @@
             text: "Find My Car"
             pos_hint: {"center_x": 0.5, "center_y": 0.25}
             icon: "car"
+            on_release: root.add_current_location_marker()
+
+# ---------------------------------------------------------------------------------------
 
 <ChangeParkedLocationModal>:
     CModalLayout:
@@ -54,6 +55,8 @@
         on_press:
             root.dismiss()
             app.root.current = 'App'
+
+# ---------------------------------------------------------------------------------------
 
 <TakePictureModal>:
     CModalLayout:
