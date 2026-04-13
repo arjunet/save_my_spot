@@ -67,7 +67,6 @@ class HomeScreen(Screen):
             print("GPS not supported on this device. Using fake coordinates.")
 
     @mainthread # Ensure UI updates happen on the main thread
-
     def on_location(self, **kwargs):
         self.lat = kwargs.get('lat')
         self.lon = kwargs.get('lon')
@@ -81,7 +80,7 @@ class HomeScreen(Screen):
 
     def add_ui_elements(self, dt):
         self.ids.main_layout.add_widget(self.mapview, index=len(self.ids.main_layout.children))
-        store = JsonStore('session.json')
+        store = JsonStore('./session.json')
         if store.exists('location'):
             data = store.get('location')
             # Use a tiny delay to ensure the MapView has initialized its bounds
@@ -103,21 +102,22 @@ class HomeScreen(Screen):
             modal = None
             
         else:
-            self.parked_car_marker = MapMarker(lat=self.lat, lon=self.lon)
+            self.parked_car_marker = MapMarker(lat=self.lat, lon=self.lon, source='car_marker.png')
+            self.parked_car_marker.size = (50, 50)  # Set a reasonable size for the marker
+            self.parked_car_marker.allow_stretch = True
+            self.parked_car_marker.keep_ratio = True
             self.mapview.add_widget(self.parked_car_marker)
-            JsonStore('session.json').put('location', lat=self.lat, lon=self.lon)
+            JsonStore('./session.json').put('location', lat=self.lat, lon=self.lon)
 
     def add_current_location_marker(self):
-        if hasattr(self, 'current_location_marker') and self.current_location_marker:
-            self.mapview.remove_widget(self.current_location_marker)
-            
         self.start_gps()  # Ensure GPS is running to get the latest location
 
-        self.current_location_marker = MapMarker(lat=self.lat, lon=self.lon, source='current_location_icon.png')
+        self.current_location_marker = MapMarker(lat=self.lat, lon=self.lon, source='current_marker.png')
+        self.current_location_marker.size = (50, 50)  # Set a reasonable size for the marker
+        self.current_location_marker.allow_stretch = True
+        self.current_location_marker.keep_ratio = True
         self.mapview.add_widget(self.current_location_marker)
-
 # ------------------------------------------------------------------------
-
 class ChangeParkedLocationModal(CModal):
     def __init__(self, lat, lon, mapview, **kwargs):
         super().__init__(**kwargs)
