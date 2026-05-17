@@ -1,20 +1,25 @@
-from kivy_garden.mapview import MapView, MapMarker
+from kivy_garden.mapview import MapView, MapMarker, MapLayer
 from kivy.uix.screenmanager import Screen
 from kivy.clock import mainthread
 from kivy.utils import platform
 from kivy.clock import Clock
 from kivy.lang import Builder
 from kivy.storage.jsonstore import JsonStore
+from kivy.graphics import Line, Color
 
 from carbonkivy.app import CarbonApp
 from carbonkivy.uix.modal import CModal
 
 from plyer import gps
 import weakref
+import threading
+import requests
 
 # Load the KV file:
 Builder.load_file('SaveMySpot.kv')
 # ------------------------------------------------------------------------
+# API KEYS:
+ORS_API_KEY = "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjY1NjAxM2Q2ZTI2OTRlOTdiM2Q5M2IxOTdkZTJlZGM2IiwiaCI6Im11cm11cjY0In0="
 class HomeScreen(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -35,6 +40,7 @@ class HomeScreen(Screen):
         self.has_centered = False
         self.current_location_marker = None
         self.parked_car_marker = None
+        self.route_layer = None
 
         # Default coordinates (Orlando, FL) in case GPS is not available:
         self.lat = 28.5384
@@ -104,9 +110,10 @@ class HomeScreen(Screen):
             self.mapview.add_widget(self.parked_car_marker)
             JsonStore('./session.json').put('location', lat=self.lat, lon=self.lon)
 
-    def add_current_location_marker(self):
+    def find_car(self):
         self.start_gps()  # Ensure GPS is running to get the latest location
 
+        # Add current location marker:
         if self.current_location_marker:
             self.mapview.remove_widget(self.current_location_marker)
 
@@ -116,9 +123,47 @@ class HomeScreen(Screen):
         self.current_location_marker.keep_ratio = True
         self.mapview.add_widget(self.current_location_marker)
 
+        # Zoom out and center:
         self.mapview.center_on(self.lat, self.lon)
         self.has_centered = True
         self.mapview.zoom = 15
+
+        # Add the route line:
+        threading.Thread(
+            target=self.get_route,
+            daemon=True
+        ).start()
+
+    def get_route(self):
+        response = requests.post(
+            "https://api.openrouteservice.org/v2/directions/foot-walking/geojson",
+            headers={
+                "Authorization": ORS_API_KEY,
+                "Content-Type": "application/json"
+                },
+            
+            json={
+                "coordinates": [
+                    [self.lon, self.lat],  # ORS uses lon,lat order
+                    [self.parked_car_marker.lon, self.parked_car_marker.lat]
+                ]
+            }
+        )
+
+        if response.status_code == 200:
+            coords = response.json()["features"][0]["geometry"]["coordinates"]
+            Clock.schedule_once(lambda dt: self.draw_route(coords))
+        else:
+            print(f"ORS ERROR: {response.text}")
+
+    @mainthread
+    def draw_route(self, coords):
+        # Remove old route if exists
+        if self.route_layer:
+            self.mapview.remove_layer(self.route_layer)
+
+        self.route_layer = RouteLayer(coords)
+        self.mapview.add_layer(self.route_layer)
 # ------------------------------------------------------------------------
 class ChangeParkedLocationModal(CModal):
     def __init__(self, lat, lon, mapview, marker, home_screen, **kwargs):
@@ -140,6 +185,25 @@ class ChangeParkedLocationModal(CModal):
         JsonStore('./session.json').put('location', lat=self.lat, lon=self.lon)
         self.home_screen.parked_car_marker = self.new_parked_car_marker
         self.dismiss()
+# ------------------------------------------------------------------------
+class RouteLayer(MapLayer):
+    def __init__(self, coords, **kwargs):
+        super().__init__(**kwargs)
+        self.coords = coords  # list of [lon, lat]
+        self.drawn_points = []
+
+    def reposition(self):
+        self.canvas.clear()
+        if not self.coords or not self.parent:
+            return
+        with self.canvas:
+            Color(0, 0.47, 1, 1)  # blue
+            points = []
+            for lon, lat in self.coords:
+                x, y = self.parent.get_window_xy_from(lat, lon, self.parent.zoom)
+                points.extend([x, y])
+            if len(points) >= 4:
+                Line(points=points, width=3)
 
 class SaveMySpot(CarbonApp):
     def build(self):
