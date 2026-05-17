@@ -77,6 +77,9 @@ class HomeScreen(Screen):
         # Update the map's center to follow your location
         print(f"Updated Position: {self.lat}, {self.lon}")
 
+        self.mapview.center_on(self.lat, self.lon)
+        self.has_centered = True
+
     def add_ui_elements(self, dt):
         self.ids.main_layout.add_widget(self.mapview, index=len(self.ids.main_layout.children))
         store = JsonStore('./session.json')
@@ -162,7 +165,11 @@ class HomeScreen(Screen):
         if self.route_layer:
             self.mapview.remove_layer(self.route_layer)
 
-        self.route_layer = RouteLayer(coords)
+        self.route_layer = RouteLayer(
+            route_coords=coords,
+            car_lat=self.parked_car_marker.lat,
+            car_lon=self.parked_car_marker.lon
+        )
         self.mapview.add_layer(self.route_layer)
 # ------------------------------------------------------------------------
 class ChangeParkedLocationModal(CModal):
@@ -187,23 +194,42 @@ class ChangeParkedLocationModal(CModal):
         self.dismiss()
 # ------------------------------------------------------------------------
 class RouteLayer(MapLayer):
-    def __init__(self, coords, **kwargs):
+    def __init__(self, route_coords, car_lat, car_lon, **kwargs):
         super().__init__(**kwargs)
-        self.coords = coords  # list of [lon, lat]
-        self.drawn_points = []
+        self.route_coords = route_coords  # [lon, lat] pairs from ORS
+        self.car_lat = car_lat
+        self.car_lon = car_lon
 
     def reposition(self):
         self.canvas.clear()
-        if not self.coords or not self.parent:
+        if not self.route_coords or not self.parent:
             return
+
         with self.canvas:
-            Color(0, 0.47, 1, 1)  # blue
+            # --- Solid blue route line ---
+            Color(0, 0.47, 1, 1)
             points = []
-            for lon, lat in self.coords:
+            for lon, lat in self.route_coords:
                 x, y = self.parent.get_window_xy_from(lat, lon, self.parent.zoom)
                 points.extend([x, y])
             if len(points) >= 4:
                 Line(points=points, width=3)
+
+            # --- Dotted line from last route point to car marker ---
+            last_lon, last_lat = self.route_coords[-1]
+            x1, y1 = self.parent.get_window_xy_from(last_lat, last_lon, self.parent.zoom)
+            x2, y2 = self.parent.get_window_xy_from(self.car_lat, self.car_lon, self.parent.zoom)
+
+            Color(0, 0.47, 1, 0.8)
+            segments = 20
+            for i in range(0, segments, 2):
+                t1 = i / segments
+                t2 = (i + 1) / segments
+                sx1 = x1 + (x2 - x1) * t1
+                sy1 = y1 + (y2 - y1) * t1
+                sx2 = x1 + (x2 - x1) * t2
+                sy2 = y1 + (y2 - y1) * t2
+                Line(points=[sx1, sy1, sx2, sy2], width=2.5)
 
 class SaveMySpot(CarbonApp):
     def build(self):
