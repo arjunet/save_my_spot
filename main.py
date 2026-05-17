@@ -71,10 +71,6 @@ class HomeScreen(Screen):
         # Update the map's center to follow your location
         print(f"Updated Position: {self.lat}, {self.lon}")
 
-        if not self.has_centered:
-            self.mapview.center_on(self.lat, self.lon)
-            self.has_centered = True
-
     def add_ui_elements(self, dt):
         self.ids.main_layout.add_widget(self.mapview, index=len(self.ids.main_layout.children))
         store = JsonStore('./session.json')
@@ -119,6 +115,10 @@ class HomeScreen(Screen):
         self.current_location_marker.allow_stretch = True
         self.current_location_marker.keep_ratio = True
         self.mapview.add_widget(self.current_location_marker)
+
+        self.mapview.center_on(self.lat, self.lon)
+        self.has_centered = True
+        self.mapview.zoom = 15
 # ------------------------------------------------------------------------
 class ChangeParkedLocationModal(CModal):
     def __init__(self, lat, lon, mapview, marker, home_screen, **kwargs):
