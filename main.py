@@ -1,4 +1,3 @@
-# Imports:
 from kivy_garden.mapview import MapView, MapMarker
 from kivy.uix.screenmanager import Screen
 from kivy.clock import mainthread
@@ -15,9 +14,7 @@ import weakref
 
 # Load the KV file:
 Builder.load_file('SaveMySpot.kv')
-
 # ------------------------------------------------------------------------
-
 class HomeScreen(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -36,6 +33,8 @@ class HomeScreen(Screen):
 
         # Default Vars:
         self.has_centered = False
+        self.current_location_marker = None
+        self.parked_car_marker = None
 
         # Default coordinates (Orlando, FL) in case GPS is not available:
         self.lat = 28.5384
@@ -48,7 +47,6 @@ class HomeScreen(Screen):
 
     def permissions_callback(self, permissions, grants):
         if all(grants):
-            print("Location permissions granted.")
             self.start_gps()
 
         else:
@@ -60,7 +58,6 @@ class HomeScreen(Screen):
             # Configure and start GPS
             gps.configure(on_location=self.on_location)
             gps.start(minTime=1000, minDistance=1)
-            print("GPS Started Successfully.")
 
         # Handle cases where GPS is not supported or available
         except (NotImplementedError, ModuleNotFoundError):
@@ -87,22 +84,24 @@ class HomeScreen(Screen):
             Clock.schedule_once(lambda dt: self.load_saved_car_marker(data['lat'], data['lon']), 0.5)
 
     def load_saved_car_marker(self, lat, lon):
-        self.parked_car_marker = MapMarker(lat=lat, lon=lon)
+        self.parked_car_marker = MapMarker(lat=lat, lon=lon, source='./images/car_marker.png')
+        self.parked_car_marker.size = (50, 50)
+        self.parked_car_marker.allow_stretch = True
+        self.parked_car_marker.keep_ratio = True
         self.mapview.add_widget(self.parked_car_marker)
-        # Center the map on the saved location
         self.mapview.center_on(lat, lon)
         self.has_centered = True
 
     def add_car_marker(self):
         if hasattr(self, 'parked_car_marker') and self.parked_car_marker:
-            modal = ChangeParkedLocationModal(lat=self.lat, lon=self.lon, mapview=self.mapview)
+            modal = ChangeParkedLocationModal(lat=self.lat, lon=self.lon, mapview=self.mapview, marker=self.parked_car_marker, home_screen=self)
             self._modal_ref = weakref.ref(modal)
             modal.open()
             self._modal_ref = None
             modal = None
             
         else:
-            self.parked_car_marker = MapMarker(lat=self.lat, lon=self.lon, source='car_marker.png')
+            self.parked_car_marker = MapMarker(lat=self.lat, lon=self.lon, source='./images/car_marker.png')
             self.parked_car_marker.size = (50, 50)  # Set a reasonable size for the marker
             self.parked_car_marker.allow_stretch = True
             self.parked_car_marker.keep_ratio = True
@@ -112,25 +111,34 @@ class HomeScreen(Screen):
     def add_current_location_marker(self):
         self.start_gps()  # Ensure GPS is running to get the latest location
 
-        self.current_location_marker = MapMarker(lat=self.lat, lon=self.lon, source='current_marker.png')
+        if self.current_location_marker:
+            self.mapview.remove_widget(self.current_location_marker)
+
+        self.current_location_marker = MapMarker(lat=self.lat, lon=self.lon, source='./images/current_marker.png')
         self.current_location_marker.size = (50, 50)  # Set a reasonable size for the marker
         self.current_location_marker.allow_stretch = True
         self.current_location_marker.keep_ratio = True
         self.mapview.add_widget(self.current_location_marker)
 # ------------------------------------------------------------------------
 class ChangeParkedLocationModal(CModal):
-    def __init__(self, lat, lon, mapview, **kwargs):
+    def __init__(self, lat, lon, mapview, marker, home_screen, **kwargs):
         super().__init__(**kwargs)
         self.lat = lat
         self.lon = lon
         self.mapview = mapview
+        self.parked_car_marker = marker
+        self.home_screen = home_screen
 
-    def change(self):
-        if hasattr(self, 'parked_car_marker') and self.parked_car_marker:
-            self.mapview.remove_widget(self.parked_car_marker)
-            
-        self.parked_car_marker = MapMarker(lat=self.lat, lon=self.lon)
-        self.mapview.add_widget(self.parked_car_marker)
+    def change_parked_loc(self):
+        self.mapview.remove_widget(self.parked_car_marker)
+
+        self.new_parked_car_marker = MapMarker(lat=self.lat, lon=self.lon, source='./images/car_marker.png')
+        self.new_parked_car_marker.size = (50, 50)  # Set a reasonable size for the marker
+        self.new_parked_car_marker.allow_stretch = True
+        self.new_parked_car_marker.keep_ratio = True
+        self.mapview.add_widget(self.new_parked_car_marker)
+        JsonStore('./session.json').put('location', lat=self.lat, lon=self.lon)
+        self.home_screen.parked_car_marker = self.new_parked_car_marker
         self.dismiss()
 
 class SaveMySpot(CarbonApp):

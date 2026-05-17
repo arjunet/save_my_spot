@@ -13,9 +13,7 @@
             pos_hint: {"center_x": 0.5, "center_y": 0.25}
             icon: "car"
             on_release: root.add_current_location_marker()
-
 # ---------------------------------------------------------------------------------------
-
 <ChangeParkedLocationModal>:
     CModalLayout:
         CModalHeader:
@@ -49,15 +47,13 @@
                 text_size: self.width - dp(20), None
                 icon: "car"
                 on_press:
-                    root.change()
+                    root.change_parked_loc()
 
     CModalCloseButton:
         on_press:
             root.dismiss()
             app.root.current = 'App'
-
 # ---------------------------------------------------------------------------------------
-
 <TakePictureModal>:
     CModalLayout:
         CModalHeader:
