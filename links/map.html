@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <script src='https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.js'></script>
+  <link href='https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.css' rel='stylesheet' />
+  <style> body { margin: 0; padding: 0; } #map { position: absolute; top: 0; bottom: 0; width: 100%; } </style>
+</head>
+<body>
+<div id="map"></div>
+<script>
+  mapboxgl.accessToken = 'pk.eyJ1IjoiYXJqdW5ldCIsImEiOiJjbW5jZTlpYjMxN2Q4Mm9vbnN6cXloZHc3In0.6mFjQz4XT7ghwW2Rc8Kcxw';
+  const map = new mapboxgl.Map({
+    container: 'map',
+    style: 'mapbox://styles/mapbox/standard', // Mapbox 3D Standard Style
+    center: [-74.0060, 40.7128],
+    zoom: 16,
+    pitch: 60, // Tilts the camera into 3D perspective!
+    bearing: -17.6
+  });
+
+  // Function called from Python via Javascript bridge
+  function updateLocation(lat, lon) {
+    map.flyTo({ center: [lon, lat] });
+  }
+</script>
+</body>
+</html>
